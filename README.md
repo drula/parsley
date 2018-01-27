@@ -5,4 +5,12 @@ Bitstream parser generator in C
 Download and install [Haskell platform](https://www.haskell.org/downloads#platform)
 
 ## Build
-`$ make`
+```
+$ cabal configure
+$ cabal build
+```
+
+## Clean
+```
+$ cabal clean
+```
