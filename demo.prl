@@ -1,0 +1,98 @@
+struct MainStruct {
+// unsigned integers, bits from 1 to 64
+    uimsbf:1    ui;
+    uimsbf:7    u7  restrict(u7 == 0x7F) dontsave;
+    uimsbf:24   u24;
+    uimsbf:64   u64;
+    uimsbf:8    u8  function(u8 + 1);
+
+// signed integers, bits from 1 to 64
+    simsbf:4    s4  restrict((ui == 0 && s4 > 0) || (u1 == 1 && s4 < 0));
+    simsbf:12   s12;
+    simsbf:24   s24;
+    simsbf:64   s64;
+
+// bit strings, bits from 1 to 64
+    bslbf:1     b1;
+    bslbf:5     b5;
+    bslbf:10    b10;
+    bslbf:64    b64;
+
+// save to enum
+    uimsbf:2    e2  enum(Enum1);
+
+// bits to skip
+    skip:6;
+
+// single substructure
+    Substruct1  sbs1;
+
+// strings
+    string[4]       str1; // the string of length 4 (without ending 0)
+    uimsbf:8        str2len;
+    string[str2len] str2;
+
+
+// conditional fields
+// single 'if'
+    if (ui == 0) {
+        uimsbf:16   u16;
+    }
+
+// 'if-else' condition
+    if (s4 > 0) {
+        uimsbf:8    var1;
+    }
+    else {
+        simsbf:16   var2;
+    }
+
+// 'if - else if - else if - ... - else' condition (or 'switch')
+    if (s4 == 0) {
+        Substruct1  var3;
+    }
+    else if (s4 > 1 && s4 < 8) {
+        uimsbf:2    var4;
+        uimsbf:3    var5;
+        skip:3;
+    }
+    else {
+        uimsbf:8    var6;
+    }
+
+// arrays (cycles)
+    uimsbf:8                        arr1_num_items;
+    uimsbf:8[arr1_num_items]        arr1;
+
+    uimsbf:8                        arr2_length;
+    section(arr2_length) {
+        Substruct2[endofsection]    arr2;   // FIXME
+    }
+
+    uimsbf:16                       section_length;
+    section(section_length) {
+        bslbf:32                    some_field1;
+        uimsbf:24                   some_field2;
+        Sutctruct2[endofsection]    arr3;
+    }
+
+// subtypes
+    enum Enum1 {
+        value0 = 0,
+        value1 = 1,
+        value2 = 2,
+        value3 = 3,
+    }
+
+    struct Substruct1 {
+        bslbf:4     field1;
+        uimsbf:12   field2;
+        simsbf:8    field3;
+    }
+
+    struct Substruct2 {
+        uimsbf:8            id;
+        uimsbf:8            str_length;
+        string[str_length]  str;
+    }
+}
