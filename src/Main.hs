@@ -1,5 +1,7 @@
 import System.Environment (getArgs, getProgName)
 import System.FilePath (addExtension, dropExtension)
+import Lex
+import Synt
 
 
 main :: IO ()
@@ -7,7 +9,11 @@ main = do
     args <- getArgs
     case args of
         [] -> showUsage
-        (inputFileName:_) -> writeFiles inputFileName
+        (inputFileName:_) -> do
+            contents <- readFile inputFileName
+            let tree = synt $ alexScanTokens contents
+            print tree
+            writeFiles inputFileName
 
     where
         writeFiles inputFileName = do
