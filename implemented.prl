@@ -1,0 +1,6 @@
+struct MainStruct {
+    uimsbf:8    u8;
+    uimsbf:16   u16;
+    uimsbf:32   u32;
+    uimsbf:64   u64;
+}
