@@ -2,6 +2,7 @@ import System.Environment (getArgs, getProgName)
 import System.FilePath (addExtension, dropExtension)
 import Lex
 import Synt
+import HeaderGen
 
 
 main :: IO ()
@@ -12,15 +13,15 @@ main = do
         (inputFileName:_) -> do
             contents <- readFile inputFileName
             let tree = synt $ alexScanTokens contents
-            print tree
-            writeFiles inputFileName
+            let headerContent = createHeader tree
+            writeFiles inputFileName headerContent
 
     where
-        writeFiles inputFileName = do
+        writeFiles inputFileName headerContent = do
             let baseFileName = (dropExtension inputFileName) ++ "_parser"
             let parserHeaderFileName = addExtension baseFileName "h"
             let parserSourceFileName = addExtension baseFileName "c"
-            writeFile parserHeaderFileName "parser header\n"
+            writeFile parserHeaderFileName headerContent
             writeFile parserSourceFileName "parser source\n"
 
         showUsage = do
