@@ -18,11 +18,11 @@ stringify (s:ss) = reverse $ map reverse $ stringify' ss [[s]]
 
 spacify :: [String] -> String
 spacify [] = ""
-spacify (s:ss) = s ++ (spacify' ss)
+spacify (s:ss) = concat $ s : (spacify' ss)
     where
         spacify' [] = []
-        spacify' (";":ss) = ";" ++ (spacify' ss)
-        spacify' (s:ss) = " " ++ s ++ (spacify' ss)
+        spacify' (";":ss) = ";" : (spacify' ss)
+        spacify' (s:ss) = " ":s:(spacify' ss)
 
 -- TODO: refactore
 tabulate :: Int -> [String] -> [String]
