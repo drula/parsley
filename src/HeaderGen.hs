@@ -4,29 +4,21 @@ import Synt
 
 -- TODO: save in a configuration file
 modulePrefix = "parsley"
-tab = "    "
 
 -- TODO: allow several brace styles
 -- TODO: check if the number of bits is a multiple of 8
-createHeader :: Description -> String
+createHeader :: Description -> [String]
 createHeader (Description (Struct name fields))
-    = "struct " ++ (prefixed $ name) ++ " {\n"
-    ++ fieldList ++ "};\n"
+    = ["struct", (prefixed $ name),"{"] ++ fieldList ++ ["}", ";"]
     where
-        fieldList = concat $ map (tabbed . lineFeed . fieldToStr) fields
+        fieldList = concat $ map fieldToStr fields
 
 -- TODO: move to common utilities module
 prefixed :: String -> String
 prefixed s = modulePrefix ++ "_" ++ s
 
-tabbed :: String -> String
-tabbed = (++) tab
-
-lineFeed :: String -> String
-lineFeed s = s ++ "\n"
-
-fieldToStr :: Field -> String
-fieldToStr (Field name typ) = typeToCType typ ++ " " ++ name ++ ";"
+fieldToStr :: Field -> [String]
+fieldToStr (Field name typ) = [typeToCType typ, name, ";"]
 
 typeToCType :: Type -> String
 typeToCType (Type (BitFieldType typ bits)) = numTypeToCType typ
