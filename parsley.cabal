@@ -61,7 +61,7 @@ executable parsley
 
   build-tools:         alex, happy
 
-  other-modules:       Lex, Synt, HeaderGen, Format
+  other-modules:       Lex, Synt, HeaderGen, CTypes
 
   -- Other library packages from which modules are imported.
   build-depends:       base, filepath, array

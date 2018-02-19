@@ -1,33 +1,32 @@
 module HeaderGen (createHeader) where
 
 import Synt
+import CTypes
 
 -- TODO: save in a configuration file
 modulePrefix = "parsley"
 
--- TODO: allow several brace styles
 -- TODO: check if the number of bits is a multiple of 8
-createHeader :: Description -> [String]
-createHeader (Description (Struct name fields))
-    = ["struct", (prefixed $ name),"{"] ++ fieldList ++ ["}", ";"]
-    where
-        fieldList = concat $ map fieldToStr fields
+createHeader :: Description -> CHeader
+createHeader (Description s) = CHeader $ createStruct s
+
+createStruct :: Struct -> CStruct
+createStruct (Struct name fs) = CStruct (prefixed name) $ createFields fs
 
 -- TODO: move to common utilities module
 prefixed :: String -> String
 prefixed s = modulePrefix ++ "_" ++ s
 
-fieldToStr :: Field -> [String]
-fieldToStr (Field name typ) = [typeToCType typ, name, ";"]
+createFields :: [Field] -> [CField]
+createFields fs = map createField fs
 
-typeToCType :: Type -> String
-typeToCType (Type (BitFieldType typ bits)) = numTypeToCType typ
-    ++ show (bitsToCTypeBits bits) ++ "_t"
-    where numTypeToCType Uimsbf = "uint"
+createField :: Field -> CField
+createField (Field n t) = CField (createType t) n
 
--- TODO: show the name of the variable in case of error
-bitsToCTypeBits :: Int -> Int
-bitsToCTypeBits n
-    | n <= 0 || n > 64 = error $ "Cannot have " ++ show n ++ " bits"
-    | n <= 8 = 8
-    | otherwise = 2 ^ (ceiling (logBase 2 (fromIntegral n)))
+createType :: Type -> CType
+createType (Type (BitFieldType Uimsbf bits)) = CUintT $ bitsToCTypeBits bits
+    where
+        bitsToCTypeBits n
+            | n <= 0 || n > 64 = error $ "Cannot have " ++ show n ++ " bits"
+            | n <= 8 = 8
+            | otherwise = 2 ^ (ceiling (logBase 2 (fromIntegral n)))
