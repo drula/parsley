@@ -1,5 +1,7 @@
 module HeaderGen (createHeader) where
 
+import Data.Char (toUpper)
+import qualified Data.Set as Set
 import Synt
 import CTypes
 
@@ -8,7 +10,13 @@ modulePrefix = "parsley"
 
 -- TODO: check if the number of bits is a multiple of 8
 createHeader :: Description -> CHeader
-createHeader (Description s) = CHeader $ createStruct s
+createHeader (Description (s @ (Struct n _)))
+    = CHeader (createIncludeGuard n) (createIncludedHeaders fs) struct
+    where (struct @ (CStruct _ fs)) = createStruct s
+
+createIncludeGuard :: String -> CIncludeGuard
+createIncludeGuard name = CIncludeGuard guardConstant
+    where guardConstant = map toUpper $ prefixed $ name ++ "_H"
 
 createStruct :: Struct -> CStruct
 createStruct (Struct name fs) = CStruct (prefixed name) $ createFields fs
@@ -30,3 +38,7 @@ createType (Type (BitFieldType Uimsbf bits)) = CUintT $ bitsToCTypeBits bits
             | n <= 0 || n > 64 = error $ "Cannot have " ++ show n ++ " bits"
             | n <= 8 = 8
             | otherwise = 2 ^ (ceiling (logBase 2 (fromIntegral n)))
+
+createIncludedHeaders :: [CField] -> [CIncludedHeader]
+createIncludedHeaders fs = map CIncludedHeader $ Set.toList $ foldr fun Set.empty fs
+    where fun (CField (CUintT _) _) s = Set.insert "stdint.h" s

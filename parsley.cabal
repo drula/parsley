@@ -64,7 +64,7 @@ executable parsley
   other-modules:       Lex, Synt, HeaderGen, CTypes
 
   -- Other library packages from which modules are imported.
-  build-depends:       base, filepath, array
+  build-depends:       base, filepath, array, containers
 
   -- Directories containing source files.
   hs-source-dirs:      src
