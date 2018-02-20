@@ -11,7 +11,7 @@ modulePrefix = "parsley"
 -- TODO: check if the number of bits is a multiple of 8
 createHeader :: Description -> CHeader
 createHeader (Description (s @ (Struct n _)))
-    = CHeader (createIncludeGuard n) (createIncludedHeaders fs) struct
+    = CHeader (createIncludeGuard n) (createIncludedHeaders fs) struct (createFunctionDecls struct)
     where (struct @ (CStruct _ fs)) = createStruct s
 
 createIncludeGuard :: String -> CIncludeGuard
@@ -41,4 +41,19 @@ createType (Type (BitFieldType Uimsbf bits)) = CUintT $ bitsToCTypeBits bits
 
 createIncludedHeaders :: [CField] -> [CIncludedHeader]
 createIncludedHeaders fs = map CIncludedHeader $ Set.toList $ foldr fun Set.empty fs
-    where fun (CField (CUintT _) _) s = Set.insert "stdint.h" s
+    where
+        fun (CField (CUintT _) _) s = Set.insert "stdint.h" s
+        fun (CField t _) _ = error $ "createIncludedHeaders is not implemented for " ++ show t
+
+-- TODO: refactore
+createFunctionDecls :: CStruct -> [CFunctionDecl]
+createFunctionDecls (CStruct n _) = [parseFunc, freeFunc]
+    where
+        parseFunc = CFunctionDecl CBool (prefixedName ++ "_parse")
+            [CField (CPointer (CUintT 8)) "data",
+             CField CSizeT "length",
+             CField (CDoublePointer (CUserT typ)) "s"] -- TODO
+        freeFunc = CFunctionDecl CVoid (prefixedName ++ "_free")
+            [CField (CPointer (CUserT typ)) "s"] -- TODO
+        prefixedName = n
+        typ = prefixedName ++ "_t"

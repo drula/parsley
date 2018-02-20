@@ -1,8 +1,10 @@
 module CTypes where
 
+import Data.List (intersperse)
+
 -- TODO: allow several brace styles
 
-data CHeader = CHeader CIncludeGuard [CIncludedHeader] CStruct
+data CHeader = CHeader CIncludeGuard [CIncludedHeader] CStruct [CFunctionDecl]
 
 -- TODO: CIncludedGuard should contain the stuff that is inside it
 data CIncludeGuard = CIncludeGuard { headerConstant :: String }
@@ -19,14 +21,28 @@ data CField = CField {
     fieldName :: String
 }
 
-data CType = CUintT Int
+data CType = CVoid | CUintT Int | CBool | CSizeT
+           | CPointer CType | CDoublePointer CType
+           | CUserT String
+
+isPointer :: CType -> Bool
+isPointer (CPointer _) = True
+isPointer (CDoublePointer _) = True
+isPointer _ = False
+
+data CFunctionDecl = CFunctionDecl {
+    returnType :: CType,
+    funcName   :: String,
+    params     :: [CField]
+}
 
 
 instance Show CHeader where
-    show (CHeader (CIncludeGuard c) hdrs s) = "#ifndef " ++ c
+    show (CHeader (CIncludeGuard c) hdrs s fds) = "#ifndef " ++ c
         ++ "\n#define " ++ c ++ "\n\n"
         ++ concat (map show hdrs) ++ "\n\n"
-        ++ show s
+        ++ show s ++ "\n\n"
+        ++ concat (intersperse "\n" (map show fds))
         ++ "\n\n#endif // " ++ c ++ "\n"
         -- according to C standard, every file must ends with a line feed character
 
@@ -43,10 +59,22 @@ instance Show CStruct where
             fields = concat $ map (tabulate . lineFeed . show) fs
             tabulate s = tab ++ s
             tab = "    " -- TODO: get from a config file
-            lineFeed s = s ++ "\n"
+            lineFeed s = s ++ ";\n"
 
 instance Show CField where
-    show (CField t n) = show t ++ " " ++ n ++ ";"
+    show (CField t n)
+        | isPointer t = show t ++ n
+        | otherwise = show t ++ " " ++ n
 
 instance Show CType where
+    show CVoid = "void"
     show (CUintT n) = "uint" ++ show n ++ "_t"
+    show CBool = "bool"
+    show CSizeT = "size_t"
+    show (CPointer t) = show t ++ " *"
+    show (CDoublePointer t) = show t ++ " **"
+    show (CUserT n) = n
+
+instance Show CFunctionDecl where
+    show (CFunctionDecl rt fn ps) = show rt ++ " " ++ fn ++ "("
+        ++ concat (intersperse ", " (map show ps)) ++ ");"
