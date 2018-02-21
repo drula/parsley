@@ -19,49 +19,49 @@ import Lex
 
 %%
 
-Description : Struct { Description $1 }
+Description : Struct { PDescription $1 }
 
-Struct : struct ident "{" FieldList "}" { Struct $2 $4 }
+Struct : struct ident "{" FieldList "}" { PStruct $2 $4 }
 
 -- FIXME: allow extra ";"
 FieldList : Field { [$1] }
           | Field FieldList { $1 : $2 } -- TODO: check complexity
 
-Field : Type ident ";" { Field $2 $1 }
+Field : Type ident ";" { PField $2 $1 }
 
-Type : BitFieldType { Type $1 }
+Type : BitFieldType { PType $1 }
   -- | other types
 
-BitFieldType : NumType ":" int { BitFieldType $1 $3 }
+BitFieldType : NumType ":" int { PBitFieldType $1 $3 }
 
-NumType : typ { Uimsbf } -- FIXME
+NumType : typ { PUimsbf } -- FIXME
 
 {
 parseError :: [Token] -> a
 parseError tokens = error $ "Parsing error: " ++ show tokens
 
-data Description = Description Struct
+data PDescription = PDescription PStruct
     deriving Show
 
-data Struct = Struct {
+data PStruct = PStruct {
     structName :: String,
-    fields     :: [Field]
+    fields     :: [PField]
 } deriving Show
 
-data Field = Field {
+data PField = PField {
     fieldName :: String,
-    fieldType :: Type
+    fieldType :: PType
 } deriving Show
 
-data Type = Type BitFieldType -- | other types
+data PType = PType PBitFieldType -- | other types
     deriving Show
 
-data BitFieldType = BitFieldType {
-    numType :: NumType,
+data PBitFieldType = PBitFieldType {
+    numType :: PNumType,
     bits    :: Int
 } deriving Show
 
 -- FIXME: use more conventional typenames
-data NumType = Uimsbf -- | Simsbf | Bslbf
+data PNumType = PUimsbf -- | Simsbf | Bslbf
     deriving Show
 }
