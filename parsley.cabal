@@ -10,7 +10,7 @@ name:                parsley
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.1.1.1
+version:             0.2.0.0
 
 -- A short (one-line) description of the package.
 synopsis:            Bitstream parser generator in C
@@ -61,7 +61,7 @@ executable parsley
 
   build-tools:         alex, happy
 
-  other-modules:       Lex, Synt, HeaderGen, CTypes
+  other-modules:       Lex, Synt, Translator, CTypes
 
   -- Other library packages from which modules are imported.
   build-depends:       base, filepath, array, containers
