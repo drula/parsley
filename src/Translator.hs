@@ -11,8 +11,8 @@ toUserTypes :: PStruct -> [CTypeDef]
 toUserTypes (PStruct name fields) = [CTypeDef (CStruct name) (map toStructField fields)]
 -- TODO: check for equal variable names
 
-toStructField :: PField -> CVar
-toStructField (PField name typ) = CVar (toCType typ) name
+toStructField :: PField -> CVarDecl
+toStructField (PField name typ) = CVarDecl (toCType typ) name
 
 toCType :: PType -> CType
 toCType (PType (PBitFieldType PUimsbf bits)) = CUintT (toCTypeBits bits)
@@ -24,18 +24,39 @@ toCTypeBits n
     | otherwise = 2 ^ (ceiling (logBase 2 (fromIntegral n)))
 
 toFunctions :: PStruct -> [CFunction]
-toFunctions (PStruct name _) = map ($ name) [parseFunction, freeFunction]
+toFunctions s = map ($ s) [parseFunction, freeFunction]
 
-parseFunction :: String -> CFunction
-parseFunction structName = CFunction parseFunctionHeader [] -- TODO: instructions
+parseFunction :: PStruct -> CFunction
+parseFunction (s @ (PStruct name _)) = CFunction parseFunctionHeader $ parseFuncInstrs s
     where
-        parseFunctionHeader = CFuncHeader CBoolT (structName ++ "_parse") [dat, len, res]
-        dat = CVar (CPtrT $ CConstT $ CUintT 8) "data"
-        len = CVar CSizeT "length"
-        res = CVar (CPtrT $ CPtrT $ CUserT $ CStruct structName) (abbreviate structName)
+        parseFunctionHeader = CFuncHeader CResultType (name ++ "_parse") [dat, len, res]
+        dat = CVarDecl (CPtrT $ CConstT $ CUintT 8) "data"
+        len = CVarDecl CSizeT "length"
+        res = CVarDecl (CPtrT $ CPtrT $ CUserT $ CStruct name) (abbreviate name)
 
-freeFunction :: String -> CFunction
-freeFunction structName = CFunction freeFunctionHeader [] -- TODO: instructions
+parseFuncInstrs :: PStruct -> [CInstruction] -- TODO
+parseFuncInstrs (PStruct name fields)
+    = [CVarD $ CVarDecl CResultType res,
+        CIfElse (CCondition $ "length == " ++ show (streamLength fields))
+            [CVarD $ CVarDecl (CPtrT $ CUserT $ CStruct name) ms,
+                {-CFuncCall-}
+                CAssignment res "RESULT_OK"]
+            [CAssignment res "RESULT_WRONG_SIZE"],
+        CReturn res]
     where
-        freeFunctionHeader = CFuncHeader CVoidT (structName ++ "_free") [ps]
-        ps = CVar (CPtrT (CUserT (CStruct structName))) (abbreviate structName)
+        res = "res"
+        ms = abbreviate name
+
+streamLength :: [PField] -> Int
+streamLength fields = if rest == 0
+                      then bytes
+                      else error "the number of bits must be a multiple of 8"
+    where
+        (bytes, rest) = divMod (sum $ map f fields) 8
+        f (PField _ (PType (PBitFieldType _ bits))) = bits
+
+freeFunction :: PStruct -> CFunction
+freeFunction (PStruct name _) = CFunction freeFunctionHeader [] -- TODO: instructions
+    where
+        freeFunctionHeader = CFuncHeader CVoidT (name ++ "_free") [ps]
+        ps = CVarDecl (CPtrT (CUserT (CStruct name))) (abbreviate name)

@@ -61,7 +61,7 @@ executable parsley
 
   build-tools:         alex, happy
 
-  other-modules:       Lex, Synt, Translator, CTypes, Utils
+  other-modules:       Lex, Synt, Translator, CTypes, Utils, Textifier
 
   -- Other library packages from which modules are imported.
   build-depends:       base, filepath, array, containers
