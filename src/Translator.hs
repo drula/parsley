@@ -32,16 +32,20 @@ parseFunction (s @ (PStruct name _)) = CFunction parseFunctionHeader $ parseFunc
         parseFunctionHeader = CFuncHeader CResultType (name ++ "_parse") [dat, len, res]
         dat = CVarDecl (CPtrT $ CConstT $ CUintT 8) "data"
         len = CVarDecl CSizeT "length"
-        res = CVarDecl (CPtrT $ CPtrT $ CUserT $ CStruct name) (abbreviate name)
+        res = CVarDecl (CPtrT $ CPtrT $ CUserT $ CStruct name) ("out_" ++ abbreviate name)
 
 parseFuncInstrs :: PStruct -> [CInstruction] -- TODO
 parseFuncInstrs (PStruct name fields)
     = [CVarD $ CVarDecl CResultType res,
         CIfElse (CCondition $ "length == " ++ show (streamLength fields))
             [CVarD $ CVarDecl (CPtrT $ CUserT $ CStruct name) ms,
-                {-CFuncCall-}
-                CAssignment res "RESULT_OK"]
-            [CAssignment res "RESULT_WRONG_SIZE"],
+                CAssignment ms (CFuncCall "malloc" ["sizeof *" ++ ms]),
+                CIfElse (CCondition "ms != NULL")
+                    [CAssignment ("*out_" ++ ms) (CJust ms),
+                    CAssignment res (CJust "RESULT_OK")]
+                    [CAssignment res (CJust "RESULT_MEMORY_ERROR")]
+            ]
+            [CAssignment res (CJust "RESULT_WRONG_SIZE")],
         CReturn res]
     where
         res = "res"

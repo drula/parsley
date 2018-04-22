@@ -49,8 +49,7 @@ instance Stringified CFuncHeader where
 
 instance Textified CInstruction where
     textify (CVarD vardecl) = [stringify vardecl ++ ";"]
-    textify (CAssignment var value) = [var ++ " = " ++ value ++ ";"]
-    textify (CFuncCall name params) = [name ++ "(" ++ (concat $ intersperse ", " params) ++ ");"]
+    textify (CAssignment var rvalue) = [var ++ " = " ++ stringify rvalue ++ ";"]
     textify (CIfElse (CCondition cond) ifInstructions elseInstructions) =
         ["if (" ++ cond ++ ") {"]
         ++ (map tabulate $ concatMap textify ifInstructions)
@@ -58,3 +57,7 @@ instance Textified CInstruction where
         ++ (map tabulate $ concatMap textify elseInstructions)
         ++ ["}"]
     textify (CReturn value) = ["return " ++ value ++ ";"]
+
+instance Stringified CRValue where
+    stringify (CJust value) = value
+    stringify (CFuncCall name params) = name ++ "(" ++ (concat $ intersperse ", " params) ++ ")"

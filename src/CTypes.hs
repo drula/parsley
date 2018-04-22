@@ -35,10 +35,13 @@ data CFuncHeader = CFuncHeader CType String [CVarDecl]
 
 -- Instruction
 data CInstruction = CVarD CVarDecl -- variable declaration
-                  | CAssignment String String -- assignment: var = value
-                  | CFuncCall String [String] -- function call: function name and list of parameters
+                  | CAssignment String CRValue -- assignment: var = value
                   | CIfElse CCondition [CInstruction] [CInstruction] -- if-else operator: if (condition) { instructions } else { instructions }
                   | CReturn String -- return statement
+    deriving Show
+
+data CRValue = CJust String
+             | CFuncCall String [String] -- function call: function name and list of parameters
     deriving Show
 
 -- Condition
