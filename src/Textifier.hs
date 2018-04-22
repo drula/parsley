@@ -33,6 +33,7 @@ instance Stringified CType where
     stringify CSizeT = "size_t"
     stringify (CUserT (CStruct name)) = name -- FIXME: with "struct"?
     stringify CResultType = "result_t"
+    stringify CBitStreamT = "bitstream_t"
     stringify (CConstT (CPtrT typ)) = stringify typ ++ " * const" -- constant pointer (int * const)
     stringify (CConstT typ) = "const " ++ stringify typ -- also pointer to constant
     stringify (CPtrT typ) = stringify typ ++ " *"
@@ -49,14 +50,16 @@ instance Stringified CFuncHeader where
 
 instance Textified CInstruction where
     textify (CVarD vardecl) = [stringify vardecl ++ ";"]
+    textify (CRV rvalue) = [stringify rvalue]
     textify (CAssignment var rvalue) = [var ++ " = " ++ stringify rvalue ++ ";"]
-    textify (CIfElse (CCondition cond) ifInstructions elseInstructions) =
-        ["if (" ++ cond ++ ") {"]
+    textify (CIfElse cond ifInstructions elseInstructions) =
+        ["if (" ++ (stringify cond) ++ ") {"]
         ++ (map tabulate $ concatMap textify ifInstructions)
         ++ ["}", "else {"]
         ++ (map tabulate $ concatMap textify elseInstructions)
         ++ ["}"]
     textify (CReturn value) = ["return " ++ value ++ ";"]
+    textify CEmpty = [""]
 
 instance Stringified CRValue where
     stringify (CJust value) = value

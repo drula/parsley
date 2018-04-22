@@ -53,7 +53,7 @@ data PField = PField {
     fieldType :: PType
 } deriving Show
 
-data PType = PType PBitFieldType -- | other types
+data PType = PType { getType :: PBitFieldType } -- | other types
     deriving Show
 
 data PBitFieldType = PBitFieldType {

@@ -16,6 +16,7 @@ data CVarDecl = CVarDecl CType String
 data CType = CVoidT | CBoolT | CUintT Int | CSizeT -- basic C types: void, bool, intN_t, size_t
            | CUserT CUserTypeName -- user defined type
            | CResultType -- parsley result type
+           | CBitStreamT -- bitstream_t
            | CPtrT CType -- pointer to type
            | CConstT CType -- type with const qualifier
     deriving Show
@@ -35,9 +36,11 @@ data CFuncHeader = CFuncHeader CType String [CVarDecl]
 
 -- Instruction
 data CInstruction = CVarD CVarDecl -- variable declaration
+                  | CRV CRValue
                   | CAssignment String CRValue -- assignment: var = value
-                  | CIfElse CCondition [CInstruction] [CInstruction] -- if-else operator: if (condition) { instructions } else { instructions }
+                  | CIfElse CRValue [CInstruction] [CInstruction] -- if-else operator: if (condition) { instructions } else { instructions }
                   | CReturn String -- return statement
+                  | CEmpty -- empty string (temporary), TODO: group instructions into blocks
     deriving Show
 
 data CRValue = CJust String
@@ -45,5 +48,5 @@ data CRValue = CJust String
     deriving Show
 
 -- Condition
-data CCondition = CCondition String -- TODO
-    deriving Show
+{-data CCondition = CCondition String -- TODO
+    deriving Show-}

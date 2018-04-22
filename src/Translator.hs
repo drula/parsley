@@ -37,19 +37,39 @@ parseFunction (s @ (PStruct name _)) = CFunction parseFunctionHeader $ parseFunc
 parseFuncInstrs :: PStruct -> [CInstruction] -- TODO
 parseFuncInstrs (PStruct name fields)
     = [CVarD $ CVarDecl CResultType res,
-        CIfElse (CCondition $ "length == " ++ show (streamLength fields))
+       CEmpty,
+       CVarD $ CVarDecl CBitStreamT bs,
+       CRV $ CFuncCall "bitstream_init" [addrBs, "data", "length"],
+       CEmpty,
+        CIfElse (CFuncCall "has_bytes" [addrBs, show (streamLength fields)])
             [CVarD $ CVarDecl (CPtrT $ CUserT $ CStruct name) ms,
                 CAssignment ms (CFuncCall "malloc" ["sizeof *" ++ ms]),
-                CIfElse (CCondition "ms != NULL")
-                    [CAssignment ("*out_" ++ ms) (CJust ms),
-                    CAssignment res (CJust "RESULT_OK")]
+                CIfElse (CJust "ms != NULL")
+                    (parseFields ms fields ++
+                    [CEmpty,
+                    CAssignment ("*out_" ++ ms) (CJust ms),
+                    CAssignment res (CJust "RESULT_OK")])
                     [CAssignment res (CJust "RESULT_MEMORY_ERROR")]
             ]
             [CAssignment res (CJust "RESULT_WRONG_SIZE")],
+        CEmpty,
         CReturn res]
     where
         res = "res"
+        bs = "bs"
+        addrBs = "&" ++ bs
         ms = abbreviate name
+
+parseFields :: String -> [PField] -> [CInstruction]
+parseFields _ [] = []
+parseFields strName (f:fs) = (CAssignment fullFiedlName
+    (CFuncCall (getReadFuncName fieldBits) [show fieldBits])) : (parseFields strName fs)
+    where
+        fullFiedlName = strName ++ "->" ++ (fieldName f)
+        fieldBits = bits $ getType $ fieldType f
+
+getReadFuncName :: Int -> String
+getReadFuncName n = "read_bits_to_uint" ++ show (toCTypeBits n)
 
 streamLength :: [PField] -> Int
 streamLength fields = if rest == 0
