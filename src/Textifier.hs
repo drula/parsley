@@ -22,8 +22,8 @@ instance Textified CTypeDef where
         ++ map (tabulate . (++ ";") . stringify) vardecls
         ++ ["} " ++ name ++ ";"]
 
--- FIXME: remove space after pointer type ("int *n", not "int * n")
 instance Stringified CVarDecl where
+    stringify (CVarDecl (ptrType @ (CPtrT _)) name) = stringify ptrType ++ name
     stringify (CVarDecl typ name) = stringify typ ++ " " ++ name
 
 instance Stringified CType where
@@ -36,6 +36,7 @@ instance Stringified CType where
     stringify CBitStreamT = "bitstream_t"
     stringify (CConstT (CPtrT typ)) = stringify typ ++ " * const" -- constant pointer (int * const)
     stringify (CConstT typ) = "const " ++ stringify typ -- also pointer to constant
+    stringify (CPtrT (ptrType @ (CPtrT _))) = stringify ptrType ++ "*"
     stringify (CPtrT typ) = stringify typ ++ " *"
 
 
