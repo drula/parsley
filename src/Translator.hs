@@ -50,10 +50,10 @@ parseFuncInstrs (PStruct name fields)
                     (parseFields ms fields ++
                     [CEmpty,
                     CAssignment ("*out_" ++ ms) (CJust ms),
-                    CAssignment res (CJust "RESULT_OK")])
-                    [CAssignment res (CJust "RESULT_MEMORY_ERROR")]
+                    CAssignment res (CJust "PRL_RESULT_OK")])
+                    [CAssignment res (CJust "PRL_RESULT_MEMORY_ERROR")]
             ]
-            [CAssignment res (CJust "RESULT_WRONG_SIZE")],
+            [CAssignment res (CJust "PRL_RESULT_WRONG_SIZE")],
         CEmpty,
         CReturn res]
     where

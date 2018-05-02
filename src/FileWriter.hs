@@ -59,6 +59,7 @@ addTypeInclude s (CPtrT typ) = addTypeInclude s typ
 addTypeInclude s (CConstT typ) = addTypeInclude s typ
 addTypeInclude s (CUintT _) = Set.insert "stdint.h" s
 addTypeInclude s CBoolT = Set.insert "stdbool.h" s
+addTypeInclude s CSizeT = Set.insert "stddef.h" s
 addTypeInclude s CResultT = Set.insert "parsley.h" s
 addTypeInclude s _ = s
 
