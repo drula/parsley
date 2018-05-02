@@ -83,7 +83,9 @@ streamLength fields = if rest == 0
         f (PField _ (PType (PBitFieldType _ bits))) = bits
 
 freeFunction :: PStruct -> CFunction
-freeFunction (PStruct name _) = CFunction freeFunctionHeader [] -- TODO: instructions
+freeFunction (PStruct name _) = CFunction freeFunctionHeader instructions
     where
         freeFunctionHeader = CFuncHeader CVoidT (name ++ "_free") [ps]
-        ps = CVarDecl (CPtrT (CUserT (CStruct (name ++ "_t")))) (abbreviate name)
+        ps = CVarDecl (CPtrT (CUserT (CStruct (name ++ "_t")))) ms
+        ms = abbreviate name
+        instructions = [CRV $ CFuncCall "free" [ms]]

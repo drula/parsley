@@ -12,3 +12,6 @@ abbreviate (c:cs) = c : abbreviate (skip cs)
 
 joinStrings :: [String] -> String
 joinStrings = intercalate "\n"
+
+joinTexts :: [String] -> String
+joinTexts = intercalate "\n\n"

@@ -16,7 +16,7 @@ writeHeader inputFileName (CContent typedefs functions) =
                                             "",
                                             joinStrings includeStrs,
                                             "",
-                                            joinStrings typedefStrs,
+                                            joinTexts typedefStrs,
                                             "",
                                             joinStrings funcHeaderStrs,
                                             "",
@@ -26,7 +26,6 @@ writeHeader inputFileName (CContent typedefs functions) =
         headerFileName = getFileName inputFileName "h"
         typedefStrs = map (joinStrings . textify) typedefs
         (ifndefStr, defineStr, endifStr) = getIncludeGuard headerFileName
-        makeInclude file = "#include <" ++ file ++ ">"
         funcHeaders = map getFuncHeader functions
         funcHeaderStrs = map ((++ ";") . stringify) funcHeaders
         funcHeaderIncludes = Set.unions $ map getFuncHeaderIncludes funcHeaders
@@ -56,6 +55,8 @@ getFuncHeaderIncludes (CFuncHeader retType _ vardecls) =
     where f s (CVarDecl typ _ ) = addTypeInclude s typ
 
 addTypeInclude :: Set.Set String -> CType -> Set.Set String
+addTypeInclude s (CPtrT typ) = addTypeInclude s typ
+addTypeInclude s (CConstT typ) = addTypeInclude s typ
 addTypeInclude s (CUintT _) = Set.insert "stdint.h" s
 addTypeInclude s CBoolT = Set.insert "stdbool.h" s
 addTypeInclude s CResultT = Set.insert "parsley.h" s
@@ -63,13 +64,33 @@ addTypeInclude s _ = s
 
 writeSource :: FilePath -> CContent -> IO ()
 writeSource inputFileName (CContent _ functions) =
-    writeFile sourceFileName $ joinStrings functionStrs
+    writeFile sourceFileName $ joinStrings [joinStrings sourceIncudeStrs,
+                                            "",
+                                            joinTexts functionStrs,
+                                            ""]
     where
         sourceFileName = getFileName inputFileName "c"
         functionStrs = map (joinStrings . textify) functions
+        headerFileName = getFileName inputFileName "h"
+        sourceIncudes = getSourceIncludes headerFileName functions
+        sourceIncudeStrs = map makeInclude $ Set.toList sourceIncudes
 
+-- TODO: remove files included in header
+getSourceIncludes :: FilePath -> [CFunction] -> Set.Set String
+getSourceIncludes headerFileName functions =
+    foldl' f1 (Set.fromList ["parsley_bitstream.h", headerFileName]) functions
+    where
+        f1 s (CFunction header instructions) =
+            Set.union (getFuncHeaderIncludes header) (foldl' f2 s instructions)
+        f2 s (CVarD (CVarDecl typ _)) = addTypeInclude s typ
+        f2 s (CRV (CFuncCall "malloc" _)) = Set.insert "stdlib.h" s
+        f2 s (CRV (CFuncCall "free" _)) = Set.insert "stdlib.h" s
+        f2 s _ = s
 
 getFileName :: FilePath -> String -> FilePath
 getFileName inputFileName extension =
     addExtension (baseFileName ++ "_parser") extension
     where baseFileName = dropExtension inputFileName
+
+makeInclude :: FilePath -> String
+makeInclude fileName = "#include <" ++ fileName ++ ">"

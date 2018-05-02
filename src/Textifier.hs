@@ -5,7 +5,7 @@ import CTypes
 
 -- TODO: move to configuration file
 parsleyPrefix = "prl_"
-projectPrefix = "prj_"
+modulePrefix = "my_"
 
 class Textified a where
     textify :: a -> [String]
@@ -24,7 +24,7 @@ instance Textified CContent where
 instance Textified CTypeDef where
     textify (CTypeDef (CStruct name) vardecls) = ["typedef struct {"]
         ++ map (tabulate . (++ ";") . stringify) vardecls
-        ++ ["} " ++ projectPrefix ++ name ++ ";"]
+        ++ ["} " ++ modulePrefix ++ name ++ ";"]
 
 instance Stringified CVarDecl where
     stringify (CVarDecl (ptrType @ (CPtrT _)) name) = stringify ptrType ++ name
@@ -35,7 +35,7 @@ instance Stringified CType where
     stringify CBoolT = "bool"
     stringify (CUintT n) = "uint" ++ show n ++ "_t"
     stringify CSizeT = "size_t"
-    stringify (CUserT (CStruct name)) = projectPrefix ++ name -- FIXME: with "struct"?
+    stringify (CUserT (CStruct name)) = modulePrefix ++ name -- FIXME: with "struct"?
     stringify CResultT = parsleyPrefix ++ "result_t"
     stringify CBitStreamT = parsleyPrefix ++ "bitstream_t"
     stringify (CConstT (CPtrT typ)) = stringify typ ++ " * const" -- constant pointer (int * const)
@@ -51,7 +51,7 @@ instance Textified CFunction where
 
 instance Stringified CFuncHeader where
     stringify (CFuncHeader resType name params) = stringify resType
-        ++ " " ++ name ++ "(" ++ (concat $ intersperse ", " $ map stringify params) ++ ")"
+        ++ " " ++ modulePrefix ++  name ++ "(" ++ (concat $ intersperse ", " $ map stringify params) ++ ")"
 
 instance Textified CInstruction where
     textify (CVarD vardecl) = [stringify vardecl ++ ";"]
