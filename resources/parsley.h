@@ -3,9 +3,9 @@
 
 typedef enum
 {
-    RESULT_OK,
-    RESULT_WRONG_SIZE,
-    RESULT_MEMORY_ERROR,
-} result_t;
+    PRL_RESULT_OK,
+    PRL_RESULT_WRONG_SIZE,
+    PRL_RESULT_MEMORY_ERROR,
+} prl_result_t;
 
 #endif // PARSLEY_H

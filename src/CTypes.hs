@@ -15,7 +15,7 @@ data CVarDecl = CVarDecl CType String
 -- C Type
 data CType = CVoidT | CBoolT | CUintT Int | CSizeT -- basic C types: void, bool, intN_t, size_t
            | CUserT CUserTypeName -- user defined type
-           | CResultType -- parsley result type
+           | CResultT -- parsley result type
            | CBitStreamT -- bitstream_t
            | CPtrT CType -- pointer to type
            | CConstT CType -- type with const qualifier

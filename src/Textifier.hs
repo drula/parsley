@@ -1,7 +1,11 @@
-module Textifier (textify) where
+module Textifier (textify, stringify) where
 
 import Data.List (intersperse)
 import CTypes
+
+-- TODO: move to configuration file
+parsleyPrefix = "prl_"
+projectPrefix = "prj_"
 
 class Textified a where
     textify :: a -> [String]
@@ -20,7 +24,7 @@ instance Textified CContent where
 instance Textified CTypeDef where
     textify (CTypeDef (CStruct name) vardecls) = ["typedef struct {"]
         ++ map (tabulate . (++ ";") . stringify) vardecls
-        ++ ["} " ++ name ++ ";"]
+        ++ ["} " ++ projectPrefix ++ name ++ ";"]
 
 instance Stringified CVarDecl where
     stringify (CVarDecl (ptrType @ (CPtrT _)) name) = stringify ptrType ++ name
@@ -31,9 +35,9 @@ instance Stringified CType where
     stringify CBoolT = "bool"
     stringify (CUintT n) = "uint" ++ show n ++ "_t"
     stringify CSizeT = "size_t"
-    stringify (CUserT (CStruct name)) = name -- FIXME: with "struct"?
-    stringify CResultType = "result_t"
-    stringify CBitStreamT = "bitstream_t"
+    stringify (CUserT (CStruct name)) = projectPrefix ++ name -- FIXME: with "struct"?
+    stringify CResultT = parsleyPrefix ++ "result_t"
+    stringify CBitStreamT = parsleyPrefix ++ "bitstream_t"
     stringify (CConstT (CPtrT typ)) = stringify typ ++ " * const" -- constant pointer (int * const)
     stringify (CConstT typ) = "const " ++ stringify typ -- also pointer to constant
     stringify (CPtrT (ptrType @ (CPtrT _))) = stringify ptrType ++ "*"

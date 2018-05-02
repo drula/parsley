@@ -8,7 +8,8 @@ translate :: PDescription -> CContent
 translate (PDescription str) = CContent (toUserTypes str) (toFunctions str)
 
 toUserTypes :: PStruct -> [CTypeDef]
-toUserTypes (PStruct name fields) = [CTypeDef (CStruct name) (map toStructField fields)]
+toUserTypes (PStruct name fields) = [CTypeDef (CStruct (name ++ "_t"))
+    (map toStructField fields)]
 -- TODO: check for equal variable names
 
 toStructField :: PField -> CVarDecl
@@ -27,22 +28,23 @@ toFunctions :: PStruct -> [CFunction]
 toFunctions s = map ($ s) [parseFunction, freeFunction]
 
 parseFunction :: PStruct -> CFunction
-parseFunction (s @ (PStruct name _)) = CFunction parseFunctionHeader $ parseFuncInstrs s
+parseFunction (s @ (PStruct name _)) = CFunction parseFunctionHeader $
+    parseFuncInstrs s
     where
-        parseFunctionHeader = CFuncHeader CResultType (name ++ "_parse") [dat, len, res]
+        parseFunctionHeader = CFuncHeader CResultT (name ++ "_parse") [dat, len, res]
         dat = CVarDecl (CPtrT $ CConstT $ CUintT 8) "data"
         len = CVarDecl CSizeT "length"
-        res = CVarDecl (CPtrT $ CPtrT $ CUserT $ CStruct name) ("out_" ++ abbreviate name)
+        res = CVarDecl (CPtrT $ CPtrT $ CUserT $ CStruct (name ++ "_t")) ("out_" ++ abbreviate name)
 
 parseFuncInstrs :: PStruct -> [CInstruction] -- TODO
 parseFuncInstrs (PStruct name fields)
-    = [CVarD $ CVarDecl CResultType res,
+    = [CVarD $ CVarDecl CResultT res,
        CEmpty,
        CVarD $ CVarDecl CBitStreamT bs,
        CRV $ CFuncCall "bs_init" [addrBs, "data", "length"],
        CEmpty,
         CIfElse (CFuncCall "bs_has_bytes" [addrBs, show (streamLength fields)])
-            [CVarD $ CVarDecl (CPtrT $ CUserT $ CStruct name) ms,
+            [CVarD $ CVarDecl (CPtrT $ CUserT $ CStruct (name ++ "_t")) ms,
                 CAssignment ms (CFuncCall "malloc" ["sizeof *" ++ ms]),
                 CIfElse (CJust "ms != NULL")
                     (parseFields ms fields ++
@@ -63,7 +65,8 @@ parseFuncInstrs (PStruct name fields)
 parseFields :: String -> [PField] -> [CInstruction]
 parseFields _ [] = []
 parseFields strName (f:fs) = (CAssignment fullFiedlName
-    (CFuncCall (getReadFuncName fieldBits) ["&bs", show fieldBits])) : (parseFields strName fs)
+    (CFuncCall (getReadFuncName fieldBits) ["&bs", show fieldBits])) :
+        (parseFields strName fs)
     where
         fullFiedlName = strName ++ "->" ++ (fieldName f)
         fieldBits = bits $ getType $ fieldType f
@@ -83,4 +86,4 @@ freeFunction :: PStruct -> CFunction
 freeFunction (PStruct name _) = CFunction freeFunctionHeader [] -- TODO: instructions
     where
         freeFunctionHeader = CFuncHeader CVoidT (name ++ "_free") [ps]
-        ps = CVarDecl (CPtrT (CUserT (CStruct name))) (abbreviate name)
+        ps = CVarDecl (CPtrT (CUserT (CStruct (name ++ "_t")))) (abbreviate name)
