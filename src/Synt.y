@@ -15,7 +15,10 @@ import Lex
     "}"     { TRightCrBrace }
     ";"     { TSemicolon }
     ":"     { TColon}
+    "["     { TLeftSqBrace}
+    "]"     { TRightSqBrace}
     typ     { TType $$ }
+    string  { TString }
 
 %%
 
@@ -29,10 +32,8 @@ FieldList : Field { [$1] }
 
 Field : Type ident ";" { PField $2 $1 }
 
-Type : BitFieldType { PType $1 }
-  -- | other types
-
-BitFieldType : NumType ":" int { PBitFieldType $1 $3 }
+Type : NumType ":" int { PBitFieldType $1 $3 }
+     | string "[" int "]" { PStringType $3 }
 
 NumType : typ { PUimsbf } -- FIXME
 
@@ -53,13 +54,9 @@ data PField = PField {
     fieldType :: PType
 } deriving Show
 
-data PType = PType { getType :: PBitFieldType } -- | other types
+data PType = PBitFieldType { numType :: PNumType, bits :: Int }
+           | PStringType Int
     deriving Show
-
-data PBitFieldType = PBitFieldType {
-    numType :: PNumType,
-    bits    :: Int
-} deriving Show
 
 -- FIXME: use more conventional typenames
 data PNumType = PUimsbf -- | Simsbf | Bslbf

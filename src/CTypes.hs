@@ -14,6 +14,7 @@ data CVarDecl = CVarDecl CType String
 
 -- C Type
 data CType = CVoidT | CBoolT | CUintT Int | CSizeT -- basic C types: void, bool, intN_t, size_t
+           | CCharArrayT Int -- char[n]
            | CUserT CUserTypeName -- user defined type
            | CResultT -- parsley result type
            | CBitStreamT -- bitstream_t

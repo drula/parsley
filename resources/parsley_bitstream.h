@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 // TODO: split into bitstream.h and bitstream_p.h
 
@@ -147,6 +148,15 @@ static inline uint32_t bs_read_bits_to_u64(prl_bitstream_t *bs, unsigned width) 
     }
 
     return result;
+}
+
+static inline void bs_read_zero_string(prl_bitstream_t *bs,
+                                            char *dest,
+                                            size_t size)
+{
+    memcpy(dest, bs->cur, size);
+    dest[size] = 0;
+    bs->cur += size;
 }
 
 #endif // PARSLEY_BITSTREAM_H

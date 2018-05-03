@@ -28,6 +28,7 @@ instance Textified CTypeDef where
 
 instance Stringified CVarDecl where
     stringify (CVarDecl (ptrType @ (CPtrT _)) name) = stringify ptrType ++ name
+    stringify (CVarDecl (CCharArrayT n) name) = "char " ++ name ++ "[" ++ show n ++ "]"
     stringify (CVarDecl typ name) = stringify typ ++ " " ++ name
 
 instance Stringified CType where
@@ -35,6 +36,7 @@ instance Stringified CType where
     stringify CBoolT = "bool"
     stringify (CUintT n) = "uint" ++ show n ++ "_t"
     stringify CSizeT = "size_t"
+    stringify (CCharArrayT _) = error "char array must not be stringified in this function"
     stringify (CUserT (CStruct name)) = modulePrefix ++ name -- FIXME: with "struct"?
     stringify CResultT = parsleyPrefix ++ "result_t"
     stringify CBitStreamT = parsleyPrefix ++ "bitstream_t"
