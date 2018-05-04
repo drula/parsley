@@ -34,6 +34,7 @@ instance Stringified CVarDecl where
 instance Stringified CType where
     stringify CVoidT = "void"
     stringify CBoolT = "bool"
+    stringify CCharT = "char"
     stringify (CUintT n) = "uint" ++ show n ++ "_t"
     stringify CSizeT = "size_t"
     stringify (CCharArrayT _) = error "char array must not be stringified in this function"

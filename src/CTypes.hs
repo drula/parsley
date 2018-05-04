@@ -13,7 +13,7 @@ data CVarDecl = CVarDecl CType String
     deriving Show
 
 -- C Type
-data CType = CVoidT | CBoolT | CUintT Int | CSizeT -- basic C types: void, bool, intN_t, size_t
+data CType = CVoidT | CBoolT | CCharT | CUintT Int | CSizeT-- basic C types: void, bool, intN_t, size_t
            | CCharArrayT Int -- char[n]
            | CUserT CUserTypeName -- user defined type
            | CResultT -- parsley result type

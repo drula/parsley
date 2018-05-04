@@ -8,5 +8,9 @@ struct main_struct {
     uimsbf:24   u24;
     uimsbf:32   u32;
     uimsbf:64   u64;
-    string[4]   str;
+
+    string[4]   fixed_str;
+
+    uimsbf:8    str_size;
+    string[str_size] sized_str;
 }

@@ -33,7 +33,8 @@ FieldList : Field { [$1] }
 Field : Type ident ";" { PField $2 $1 }
 
 Type : NumType ":" int { PBitFieldType $1 $3 }
-     | string "[" int "]" { PStringType $3 }
+     | string "[" int "]" { PFixedStringType $3 }
+     | string "[" ident "]" { PSizedStringType $3 }
 
 NumType : typ { PUimsbf } -- FIXME
 
@@ -55,7 +56,8 @@ data PField = PField {
 } deriving Show
 
 data PType = PBitFieldType { numType :: PNumType, bits :: Int }
-           | PStringType Int
+           | PFixedStringType Int
+           | PSizedStringType String -- variable name with the size of the string
     deriving Show
 
 -- FIXME: use more conventional typenames

@@ -17,7 +17,8 @@ toStructField (PField name typ) = CVarDecl (toCType typ) name
 
 toCType :: PType -> CType
 toCType (PBitFieldType PUimsbf bits) = CUintT (toCTypeBits bits)
-toCType (PStringType size) = CCharArrayT (succ size) -- FIXME: overflow
+toCType (PFixedStringType size) = CCharArrayT (succ size) -- FIXME: overflow
+toCType (PSizedStringType _) = CPtrT CCharT
 
 toCTypeBits :: Int -> Int
 toCTypeBits n
@@ -37,55 +38,99 @@ parseFunction (s @ (PStruct name _)) = CFunction parseFunctionHeader $
         len = CVarDecl CSizeT "length"
         res = CVarDecl (CPtrT $ CPtrT $ CUserT $ CStruct (name ++ "_t")) ("out_" ++ abbreviate name)
 
-parseFuncInstrs :: PStruct -> [CInstruction] -- TODO
-parseFuncInstrs (PStruct name fields)
-    = [CVarD $ CVarDecl CResultT res,
-       CEmpty,
-       CVarD $ CVarDecl CBitStreamT bs,
-       CRV $ CFuncCall "bs_init" [addrBs, "data", "length"],
-       CEmpty,
-        CIfElse (CFuncCall "bs_has_bytes" [addrBs, show (streamLength fields)])
-            [CVarD $ CVarDecl (CPtrT $ CUserT $ CStruct (name ++ "_t")) ms,
-                CAssignment ms (CFuncCall "malloc" ["sizeof *" ++ ms]),
-                CIfElse (CJust "ms != NULL")
-                    (parseFields 0 ms fields ++
-                    [CEmpty,
-                    CAssignment ("*out_" ++ ms) (CJust ms),
-                    CAssignment res (CJust "PRL_RESULT_OK")])
-                    [CAssignment res (CJust "PRL_RESULT_MEMORY_ERROR")]
-            ]
-            [CAssignment res (CJust "PRL_RESULT_WRONG_SIZE")],
-        CEmpty,
-        CReturn res]
+data ParseState = Initial | Parse
+
+parseInstructions :: [PField] -> ParseState -> [CInstruction]
+parseInstructions [] _ =
+    [
+        CAssignment ("*out_" ++ ms) (CJust ms),
+        CReturn "PRL_RESULT_OK"
+    ]
     where
+        ms = "ms" -- FIXME: ugly hack
+
+-- FIXME: check the size of fields group
+parseInstructions ((PField name (PBitFieldType _ bits)):fs) Parse =
+    (CAssignment fullFieldName (CFuncCall ("bs_read_bits_to_u" ++ show (toCTypeBits bits)) ["&bs", show bits]))
+    : (parseInstructions fs Parse)
+    where fullFieldName = "ms->" ++ name
+
+parseInstructions ((PField name (PFixedStringType n)):fs) Parse =
+    (CRV (CFuncCall "bs_read_zero_string" ["&bs", fullFieldName, show n]))
+    : (parseInstructions fs Parse)
+    where fullFieldName = "ms->" ++ name
+
+parseInstructions ((PField name (PSizedStringType sizeFieldName)):fs) Parse =
+    [
+        CIfElse (CFuncCall "bs_has_bytes" ["&bs", fullSizeFieldName])
+        [
+            CAssignment fullFieldName (CFuncCall "malloc" [fullSizeFieldName ++ " + 1"]),
+            CIfElse (CJust $ fullFieldName ++ " != NULL")
+            (
+                ((CRV $ CFuncCall "bs_read_zero_string" ["&bs", fullFieldName, fullSizeFieldName])
+                : (parseInstructions fs Parse)) ++
+                [CRV $ CFuncCall "free" [fullFieldName]]
+                -- TODO: check if "free" is really needed (if it isn't after "return OK")
+            )
+            [
+                CAssignment res (CJust "PRL_RESULT_MEMORY_ERROR")
+            ]
+        ]
+        [
+            CAssignment res (CJust "PRL_RESULT_WRONG_SIZE")
+        ]
+    ]
+    where
+        fullSizeFieldName = "ms->" ++ sizeFieldName
+        fullFieldName = "ms->" ++ name
         res = "res"
+
+parseInstructions fs Initial =
+    [
+        CVarD $ CVarDecl CResultT res,
+        CEmpty,
+        CVarD $ CVarDecl CBitStreamT bs,
+        CRV $ CFuncCall "bs_init" [addrBs, "data", "length"],
+        CEmpty,
+        CIfElse (CFuncCall "bs_has_bytes" [addrBs, show (toBytes $ getKnownPartBitSize fs 0)])
+        [
+            CVarD $ CVarDecl (CPtrT $ CUserT $ CStruct ms_type) ms,
+            CAssignment ms (CFuncCall "calloc" ["1", "sizeof *" ++ ms]),
+            CIfElse (CJust "ms != NULL")
+            (
+                (parseInstructions fs Parse) ++
+                [CEmpty,
+                CRV $ CFuncCall "free" [ms]]
+            )
+            [
+                CAssignment res (CJust "PRL_RESULT_WRONG_SIZE")
+            ]
+        ]
+        [
+            CAssignment res (CJust "PRL_RESULT_WRONG_SIZE")
+        ],
+        CEmpty,
+        CReturn res
+    ]
+    where
+        toBytes bitSize = if bitSize `mod` 8 == 0
+                          then bitSize `div` 8
+                          else error "the bit size is not a multiple of 8" -- FIXME: more descriptive message
+        getKnownPartBitSize [] bitSize = bitSize
+        getKnownPartBitSize ((PField _ (PBitFieldType _ bits)) : fs) bitSize = getKnownPartBitSize fs (bitSize + bits)
+        getKnownPartBitSize ((PField _ (PFixedStringType size)) : fs) bitSize = getKnownPartBitSize fs (bitSize + size * 8)
+        getKnownPartBitSize ((PField _ (PSizedStringType _)) : _) bitSize = bitSize
+
         bs = "bs"
         addrBs = "&" ++ bs
-        ms = abbreviate name
+        res = "res"
+        ms = "ms" -- FIXME: ugly hack
+        ms_type = "main_struct_t" -- FIXME: ugly hack
 
-parseFields :: Int -> String -> [PField] -> [CInstruction]
-parseFields _ _ [] = []
-parseFields offset strName (f:fs) = (getReadFunction f) : (parseFields (getNewOffset f) strName fs)
-    where
-        fullFiedlName = strName ++ "->" ++ (fieldName f)
-        getReadFunction (PField _ (PBitFieldType _ n)) =
-            CAssignment fullFiedlName (CFuncCall ("bs_read_bits_to_u" ++ show (toCTypeBits n)) ["&bs", show n])
-        getReadFunction (PField name (PStringType n)) =
-            if offset `mod` 8 == 0
-            then CRV (CFuncCall "bs_read_zero_string" ["&bs", fullFiedlName, show n])
-            else error $ "the beginning of the string `" ++ name ++ "` is not located at the beginning of byte"
-        getNewOffset (PField _ (PBitFieldType _ n)) = offset + n
-        getNewOffset (PField _ (PStringType n)) = offset + n * 8
+parseFuncInstrs :: PStruct -> [CInstruction]
+parseFuncInstrs (PStruct name fields) = parseInstructions fields Initial
 
-streamLength :: [PField] -> Int
-streamLength fields = if rest == 0
-                      then bytes
-                      else error "the number of bits must be a multiple of 8"
-    where
-        (bytes, rest) = divMod (sum $ map f fields) 8
-        f (PField _ (PBitFieldType _ bits)) = bits
-        f (PField _ (PStringType size)) = size * 8
-
+-- TODO: free inner fields
 freeFunction :: PStruct -> CFunction
 freeFunction (PStruct name _) = CFunction freeFunctionHeader instructions
     where

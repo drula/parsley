@@ -85,6 +85,7 @@ getSourceIncludes headerFileName functions =
             Set.union (getFuncHeaderIncludes header) (foldl' f2 s instructions)
         f2 s (CVarD (CVarDecl typ _)) = addTypeInclude s typ
         f2 s (CRV (CFuncCall "malloc" _)) = Set.insert "stdlib.h" s
+        f2 s (CRV (CFuncCall "calloc" _)) = Set.insert "stdlib.h" s
         f2 s (CRV (CFuncCall "free" _)) = Set.insert "stdlib.h" s
         f2 s _ = s
 

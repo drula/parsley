@@ -15,7 +15,7 @@ $ cabal install
 ```
 Make sure that `~/.cabal` is added to PATH system variable.
 ```
-$ export PATH="$PATH:$HOME/.cabal
+$ export PATH="$PATH:$HOME/.cabal/bin"
 ```
 
 ## Run
