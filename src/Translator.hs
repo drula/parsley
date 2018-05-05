@@ -38,7 +38,7 @@ parseFunction (s @ (PStruct name _)) = CFunction parseFunctionHeader $
         len = CVarDecl CSizeT "length"
         res = CVarDecl (CPtrT $ CPtrT $ CUserT $ CStruct (name ++ "_t")) ("out_" ++ abbreviate name)
 
-data ParseState = Initial | Parse
+data ParseState = Initial | Parse | CheckSize
 
 parseInstructions :: [PField] -> ParseState -> [CInstruction]
 parseInstructions [] _ =
@@ -48,6 +48,14 @@ parseInstructions [] _ =
     ]
     where
         ms = "ms" -- FIXME: ugly hack
+
+parseInstructions fs CheckSize =
+    [
+        CIfElse (CFuncCall "bs_has_bytes" ["&bs", show (toBytes $ getKnownPartBitSize fs 0)])
+        (parseInstructions fs Parse )
+        [CAssignment res (CJust "PRL_RESULT_WRONG_SIZE")]
+    ]
+    where res = "res"
 
 -- FIXME: check the size of fields group
 parseInstructions ((PField name (PBitFieldType _ bits)):fs) Parse =
@@ -68,7 +76,7 @@ parseInstructions ((PField name (PSizedStringType sizeFieldName)):fs) Parse =
             CIfElse (CJust $ fullFieldName ++ " != NULL")
             (
                 ((CRV $ CFuncCall "bs_read_zero_string" ["&bs", fullFieldName, fullSizeFieldName])
-                : (parseInstructions fs Parse)) ++
+                : (parseInstructions fs CheckSize)) ++
                 [CRV $ CFuncCall "free" [fullFieldName]]
                 -- TODO: check if "free" is really needed (if it isn't after "return OK")
             )
@@ -113,19 +121,22 @@ parseInstructions fs Initial =
         CReturn res
     ]
     where
-        toBytes bitSize = if bitSize `mod` 8 == 0
-                          then bitSize `div` 8
-                          else error "the bit size is not a multiple of 8" -- FIXME: more descriptive message
-        getKnownPartBitSize [] bitSize = bitSize
-        getKnownPartBitSize ((PField _ (PBitFieldType _ bits)) : fs) bitSize = getKnownPartBitSize fs (bitSize + bits)
-        getKnownPartBitSize ((PField _ (PFixedStringType size)) : fs) bitSize = getKnownPartBitSize fs (bitSize + size * 8)
-        getKnownPartBitSize ((PField _ (PSizedStringType _)) : _) bitSize = bitSize
-
         bs = "bs"
         addrBs = "&" ++ bs
         res = "res"
         ms = "ms" -- FIXME: ugly hack
         ms_type = "main_struct_t" -- FIXME: ugly hack
+
+toBytes :: Int -> Int
+toBytes bitSize = if bitSize `mod` 8 == 0
+                  then bitSize `div` 8
+                  else error "the bit size is not a multiple of 8" -- FIXME: more descriptive message
+
+getKnownPartBitSize :: [PField] -> Int -> Int
+getKnownPartBitSize [] bitSize = bitSize
+getKnownPartBitSize ((PField _ (PBitFieldType _ bits)) : fs) bitSize = getKnownPartBitSize fs (bitSize + bits)
+getKnownPartBitSize ((PField _ (PFixedStringType size)) : fs) bitSize = getKnownPartBitSize fs (bitSize + size * 8)
+getKnownPartBitSize ((PField _ (PSizedStringType _)) : _) bitSize = bitSize
 
 parseFuncInstrs :: PStruct -> [CInstruction]
 parseFuncInstrs (PStruct name fields) = parseInstructions fields Initial
