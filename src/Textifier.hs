@@ -60,6 +60,10 @@ instance Textified CInstruction where
     textify (CVarD vardecl) = [stringify vardecl ++ ";"]
     textify (CRV rvalue) = [stringify rvalue ++ ";"]
     textify (CAssignment var rvalue) = [var ++ " = " ++ stringify rvalue ++ ";"]
+    textify (CIfElse cond ifInstructions []) =
+        ["if (" ++ (stringify cond) ++ ") {"]
+        ++ (map tabulate $ concatMap textify ifInstructions)
+        ++ ["}"]
     textify (CIfElse cond ifInstructions elseInstructions) =
         ["if (" ++ (stringify cond) ++ ") {"]
         ++ (map tabulate $ concatMap textify ifInstructions)

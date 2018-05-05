@@ -81,13 +81,22 @@ getSourceIncludes :: FilePath -> [CFunction] -> Set.Set String
 getSourceIncludes headerFileName functions =
     foldl' f1 (Set.fromList ["parsley_bitstream.h", headerFileName]) functions
     where
+        f1 :: Set.Set String -> CFunction -> Set.Set String
         f1 s (CFunction header instructions) =
             Set.union (getFuncHeaderIncludes header) (foldl' f2 s instructions)
+
+        f2 :: Set.Set String -> CInstruction -> Set.Set String
         f2 s (CVarD (CVarDecl typ _)) = addTypeInclude s typ
-        f2 s (CRV (CFuncCall "malloc" _)) = Set.insert "stdlib.h" s
-        f2 s (CRV (CFuncCall "calloc" _)) = Set.insert "stdlib.h" s
-        f2 s (CRV (CFuncCall "free" _)) = Set.insert "stdlib.h" s
+        f2 s (CRV rvalue) = f3 s rvalue
+        f2 s (CAssignment _ rvalue) = f3 s rvalue
+        f2 s (CIfElse rvalue ifInstrs elseInstrs) = foldl' f2 (foldl' f2 (f3 s rvalue) ifInstrs) elseInstrs
         f2 s _ = s
+
+        f3 :: Set.Set String -> CRValue -> Set.Set String
+        f3 s (CFuncCall "malloc" _) = Set.insert "stdlib.h" s
+        f3 s (CFuncCall "calloc" _) = Set.insert "stdlib.h" s
+        f3 s (CFuncCall "free" _) = Set.insert "stdlib.h" s
+        f3 s _ = s
 
 getFileName :: FilePath -> String -> FilePath
 getFileName inputFileName extension =

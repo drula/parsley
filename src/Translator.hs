@@ -132,9 +132,24 @@ parseFuncInstrs (PStruct name fields) = parseInstructions fields Initial
 
 -- TODO: free inner fields
 freeFunction :: PStruct -> CFunction
-freeFunction (PStruct name _) = CFunction freeFunctionHeader instructions
+freeFunction (PStruct name fields) = CFunction freeFunctionHeader (getFreeInstructions fields)
     where
         freeFunctionHeader = CFuncHeader CVoidT (name ++ "_free") [ps]
         ps = CVarDecl (CPtrT (CUserT (CStruct (name ++ "_t")))) ms
         ms = abbreviate name
-        instructions = [CRV $ CFuncCall "free" [ms]]
+
+        getFreeInstructions :: [PField] -> [CInstruction]
+        getFreeInstructions fields =
+            [
+                CIfElse (CJust $ ms ++ "!= NULL")
+                ((getFreeFieldsInstructions fields) ++ [CRV $ CFuncCall "free" [ms]])
+                []
+            ]
+
+        getFreeFieldsInstructions :: [PField] -> [CInstruction]
+        getFreeFieldsInstructions [] = []
+        getFreeFieldsInstructions ((PField name (PSizedStringType _)):fs) =
+            (CRV $ CFuncCall "free" [ms ++ "->" ++ name])
+            : (getFreeFieldsInstructions fs)
+        getFreeFieldsInstructions (_:fs) = getFreeFieldsInstructions fs
+
